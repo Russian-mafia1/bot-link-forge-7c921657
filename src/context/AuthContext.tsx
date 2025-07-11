@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         
         if (session?.user) {
-          // Fetch or create user profile
+          // Fetch user profile after authentication
           setTimeout(async () => {
             try {
               const { data: profile, error } = await supabase
