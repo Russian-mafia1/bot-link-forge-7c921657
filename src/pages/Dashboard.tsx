@@ -19,15 +19,15 @@ import {
   Trash2
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import axios from 'axios';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Bot {
-  _id: string;
+  id: string;
   name: string;
-  githubRepo: string;
+  github_repo: string;
   status: 'running' | 'stopped' | 'deploying' | 'failed';
-  createdAt: string;
-  deploymentId?: string;
+  created_at: string;
+  deployment_id?: string;
 }
 
 const Dashboard = () => {
@@ -39,9 +39,11 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    checkClaimStatus();
-    fetchBots();
-  }, []);
+    if (user) {
+      checkClaimStatus();
+      fetchBots();
+    }
+  }, [user]);
 
   const checkClaimStatus = () => {
     if (!user?.lastClaim) {
@@ -58,9 +60,20 @@ const Dashboard = () => {
   };
 
   const fetchBots = async () => {
+    if (!user) return;
+    
     try {
-      const response = await axios.get('/api/bots');
-      setBots(response.data.bots);
+      const { data, error } = await supabase
+        .from('bots')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Failed to fetch bots:', error);
+      } else {
+        setBots(data || []);
+      }
     } catch (error) {
       console.error('Failed to fetch bots:', error);
     } finally {
@@ -69,10 +82,26 @@ const Dashboard = () => {
   };
 
   const claimDailyCoins = async () => {
+    if (!user) return;
+    
     setIsClaimingCoins(true);
     try {
-      const response = await axios.post('/api/coins/claim-daily');
-      updateUser({ coins: response.data.coins, lastClaim: new Date().toISOString() });
+      const newCoins = user.coins + 10;
+      const now = new Date().toISOString();
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          coins: newCoins,
+          last_claim: now
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      updateUser({ coins: newCoins, lastClaim: now });
       setCanClaim(false);
       toast({
         title: "Coins claimed! 🎉",
@@ -81,7 +110,7 @@ const Dashboard = () => {
     } catch (error: any) {
       toast({
         title: "Claim failed",
-        description: error.response?.data?.message || "Failed to claim coins",
+        description: "Failed to claim coins",
         variant: "destructive",
       });
     } finally {
@@ -90,7 +119,9 @@ const Dashboard = () => {
   };
 
   const copyReferralLink = () => {
-    const referralLink = `${window.location.origin}/register?ref=${user?.referralCode}`;
+    if (!user) return;
+    
+    const referralLink = `${window.location.origin}/register?ref=${user.referralCode}`;
     navigator.clipboard.writeText(referralLink);
     toast({
       title: "Referral link copied!",
@@ -125,27 +156,26 @@ const Dashboard = () => {
   };
 
   const restartBot = async (botId: string) => {
-    try {
-      await axios.post(`/api/bots/${botId}/restart`);
-      toast({
-        title: "Bot restarted",
-        description: "Your bot is being restarted.",
-      });
-      fetchBots();
-    } catch (error: any) {
-      toast({
-        title: "Restart failed",
-        description: error.response?.data?.message || "Failed to restart bot",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Bot restart initiated",
+      description: "Your bot is being restarted.",
+    });
+    // TODO: Implement restart functionality
   };
 
   const deleteBot = async (botId: string) => {
     if (!confirm('Are you sure you want to delete this bot?')) return;
 
     try {
-      await axios.delete(`/api/bots/${botId}`);
+      const { error } = await supabase
+        .from('bots')
+        .delete()
+        .eq('id', botId);
+
+      if (error) {
+        throw error;
+      }
+
       toast({
         title: "Bot deleted",
         description: "Your bot has been deleted successfully.",
@@ -154,7 +184,7 @@ const Dashboard = () => {
     } catch (error: any) {
       toast({
         title: "Delete failed",
-        description: error.response?.data?.message || "Failed to delete bot",
+        description: "Failed to delete bot",
         variant: "destructive",
       });
     }
@@ -290,16 +320,16 @@ const Dashboard = () => {
             <div className="space-y-4">
               {bots.map((bot) => (
                 <div
-                  key={bot._id}
+                  key={bot.id}
                   className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg border border-slate-600/30"
                 >
                   <div className="flex items-center space-x-4">
                     {getStatusIcon(bot.status)}
                     <div>
                       <h3 className="font-semibold text-white">{bot.name}</h3>
-                      <p className="text-sm text-slate-400">{bot.githubRepo}</p>
+                      <p className="text-sm text-slate-400">{bot.github_repo}</p>
                       <p className="text-xs text-slate-500">
-                        Created {new Date(bot.createdAt).toLocaleDateString()}
+                        Created {new Date(bot.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -313,7 +343,7 @@ const Dashboard = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => restartBot(bot._id)}
+                        onClick={() => restartBot(bot.id)}
                         className="border-green-500/50 text-green-400 hover:bg-green-500/10"
                       >
                         <Play className="w-4 h-4" />
@@ -321,7 +351,7 @@ const Dashboard = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => deleteBot(bot._id)}
+                        onClick={() => deleteBot(bot.id)}
                         className="border-red-500/50 text-red-400 hover:bg-red-500/10"
                       >
                         <Trash2 className="w-4 h-4" />

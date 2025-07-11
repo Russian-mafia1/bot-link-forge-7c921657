@@ -1,8 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
-interface User {
+interface AuthUser {
   id: string;
   email: string;
   username: string;
@@ -12,12 +13,12 @@ interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
-  token: string | null;
+  user: AuthUser | null;
+  session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string, referralCode?: string) => Promise<void>;
-  logout: () => void;
-  updateUser: (userData: Partial<User>) => void;
+  logout: () => Promise<void>;
+  updateUser: (userData: Partial<AuthUser>) => void;
   isLoading: boolean;
 }
 
@@ -32,76 +33,127 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Set default axios headers
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  }, [token]);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        
+        if (session?.user) {
+          // Fetch or create user profile
+          setTimeout(async () => {
+            try {
+              const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
 
-  // Check if user is logged in on app start
-  useEffect(() => {
-    const checkAuth = async () => {
-      if (token) {
-        try {
-          const response = await axios.get('/api/auth/me');
-          setUser(response.data.user);
-        } catch (error) {
-          console.error('Auth check failed:', error);
-          localStorage.removeItem('token');
-          setToken(null);
+              if (error && error.code === 'PGRST116') {
+                // Profile doesn't exist, create one
+                const newProfile = {
+                  id: session.user.id,
+                  email: session.user.email!,
+                  username: session.user.email!.split('@')[0],
+                  coins: 10,
+                  referral_code: Math.random().toString(36).substring(2, 8).toUpperCase(),
+                  last_claim: null
+                };
+
+                const { data: createdProfile, error: createError } = await supabase
+                  .from('profiles')
+                  .insert([newProfile])
+                  .select()
+                  .single();
+
+                if (!createError && createdProfile) {
+                  setUser({
+                    id: createdProfile.id,
+                    email: createdProfile.email,
+                    username: createdProfile.username,
+                    coins: createdProfile.coins,
+                    referralCode: createdProfile.referral_code,
+                    lastClaim: createdProfile.last_claim
+                  });
+                }
+              } else if (profile) {
+                setUser({
+                  id: profile.id,
+                  email: profile.email,
+                  username: profile.username,
+                  coins: profile.coins,
+                  referralCode: profile.referral_code,
+                  lastClaim: profile.last_claim
+                });
+              }
+            } catch (error) {
+              console.error('Error fetching profile:', error);
+            }
+          }, 0);
+        } else {
+          setUser(null);
         }
+        
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    };
+    );
 
-    checkAuth();
-  }, [token]);
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (!session) {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const response = await axios.post('/api/auth/login', { email, password });
-      const { token: newToken, user: userData } = response.data;
-      
-      localStorage.setItem('token', newToken);
-      setToken(newToken);
-      setUser(userData);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Login failed');
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw new Error(error.message);
     }
   };
 
   const register = async (email: string, username: string, password: string, referralCode?: string) => {
-    try {
-      const response = await axios.post('/api/auth/register', {
-        email,
-        username,
-        password,
-        referralCode
-      });
-      const { token: newToken, user: userData } = response.data;
-      
-      localStorage.setItem('token', newToken);
-      setToken(newToken);
-      setUser(userData);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Registration failed');
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          username,
+          referral_code: referralCode
+        }
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw new Error(error.message);
+    }
     setUser(null);
+    setSession(null);
   };
 
-  const updateUser = (userData: Partial<User>) => {
+  const updateUser = (userData: Partial<AuthUser>) => {
     if (user) {
       setUser({ ...user, ...userData });
     }
@@ -111,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
-        token,
+        session,
         login,
         register,
         logout,

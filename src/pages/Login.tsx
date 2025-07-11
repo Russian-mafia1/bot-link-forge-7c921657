@@ -114,12 +114,6 @@ const Login = () => {
               </Link>
             </p>
           </div>
-
-          <div className="mt-4 p-3 bg-slate-700/30 rounded-lg">
-            <p className="text-xs text-slate-400 text-center">
-              Admin Access: admin@hacklink.com / admin
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
