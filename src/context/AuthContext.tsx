@@ -46,53 +46,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           // Fetch user profile after authentication
           setTimeout(async () => {
-            try {
-              const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-
-              if (error && error.code === 'PGRST116') {
-                // Profile doesn't exist, create one
-                const newProfile = {
-                  id: session.user.id,
-                  email: session.user.email!,
-                  username: session.user.email!.split('@')[0],
-                  coins: 10,
-                  referral_code: Math.random().toString(36).substring(2, 8).toUpperCase(),
-                  last_claim: null
-                };
-
-                const { data: createdProfile, error: createError } = await supabase
-                  .from('profiles')
-                  .insert([newProfile])
-                  .select()
-                  .single();
-
-                if (!createError && createdProfile) {
+              try {
+                // Use a raw query to avoid type issues
+                const { data } = await supabase.rpc('get_user_profile', { 
+                  user_uuid: session.user.id 
+                });
+                
+                if (data?.[0]) {
+                  const profile = data[0];
                   setUser({
-                    id: createdProfile.id,
-                    email: createdProfile.email,
-                    username: createdProfile.username,
-                    coins: createdProfile.coins,
-                    referralCode: createdProfile.referral_code,
-                    lastClaim: createdProfile.last_claim
+                    id: profile.id,
+                    email: profile.email,
+                    username: profile.username,
+                    coins: profile.coins,
+                    referralCode: profile.referral_code,
+                    lastClaim: profile.last_claim
                   });
                 }
-              } else if (profile) {
-                setUser({
-                  id: profile.id,
-                  email: profile.email,
-                  username: profile.username,
-                  coins: profile.coins,
-                  referralCode: profile.referral_code,
-                  lastClaim: profile.last_claim
-                });
+              } catch (error) {
+                console.error('Error fetching profile:', error);
               }
-            } catch (error) {
-              console.error('Error fetching profile:', error);
-            }
           }, 0);
         } else {
           setUser(null);
@@ -118,17 +91,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // If input doesn't contain @, treat it as username and fetch email
     if (!emailOrUsername.includes('@')) {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('username', emailOrUsername)
-        .single();
-      
-      if (error || !profile) {
-        throw new Error('Username not found');
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('username', emailOrUsername)
+          .single();
+        
+        if (error) {
+          if (error.code === 'PGRST116') {
+            throw new Error('Username not found. Please check your username or sign up for an account.');
+          }
+          throw new Error('Error looking up username. Please try again.');
+        }
+        
+        if (!profile) {
+          throw new Error('Username not found. Please check your username or sign up for an account.');
+        }
+        
+        email = profile.email;
+      } catch (error: any) {
+        throw new Error(error.message || 'Error looking up username. Please try again.');
       }
-      
-      email = profile.email;
     }
     
     const { error } = await supabase.auth.signInWithPassword({
@@ -137,7 +121,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) {
-      throw new Error(error.message);
+      if (error.message === 'Email not confirmed') {
+        throw new Error('Please check your email and click the confirmation link before signing in.');
+      } else if (error.message === 'Invalid login credentials') {
+        throw new Error('Invalid email/username or password. Please check your credentials.');
+      } else {
+        throw new Error(error.message);
+      }
     }
   };
 
