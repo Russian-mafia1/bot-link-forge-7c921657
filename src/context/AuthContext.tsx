@@ -15,7 +15,7 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   session: Session | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (emailOrUsername: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string, referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<AuthUser>) => void;
@@ -113,7 +113,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (emailOrUsername: string, password: string) => {
+    let email = emailOrUsername;
+    
+    // If input doesn't contain @, treat it as username and fetch email
+    if (!emailOrUsername.includes('@')) {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('username', emailOrUsername)
+        .single();
+      
+      if (error || !profile) {
+        throw new Error('Username not found');
+      }
+      
+      email = profile.email;
+    }
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
