@@ -25,7 +25,7 @@ interface Bot {
   id: string;
   name: string;
   github_repo: string;
-  status: 'running' | 'stopped' | 'deploying' | 'failed';
+  status: string;
   created_at: string;
   deployment_id?: string;
 }
