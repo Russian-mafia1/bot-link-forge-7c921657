@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Zap, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import GitHubButton from '@/components/GitHubButton';
 
 const Login = () => {
   const [emailOrUsername, setEmailOrUsername] = useState('');
@@ -62,9 +64,21 @@ const Login = () => {
           </CardDescription>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* GitHub Login Button */}
+          <GitHubButton mode="login" />
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator className="w-full bg-slate-600/50" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-slate-800/50 px-2 text-slate-400">Or continue with</span>
+            </div>
+          </div>
+
           {showHelp && (
-            <Alert className="mb-4 border-yellow-500/50 bg-yellow-500/10">
+            <Alert className="border-yellow-500/50 bg-yellow-500/10">
               <AlertCircle className="h-4 w-4 text-yellow-500" />
               <AlertDescription className="text-yellow-200">
                 <strong>Username not found?</strong> Make sure you've signed up first, or try using your email address instead.
@@ -121,7 +135,7 @@ const Login = () => {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="text-center">
             <p className="text-slate-400">
               Don't have an account?{' '}
               <Link
@@ -134,7 +148,7 @@ const Login = () => {
           </div>
 
           {showHelp && (
-            <div className="mt-4 p-3 bg-slate-700/30 rounded-lg">
+            <div className="p-3 bg-slate-700/30 rounded-lg">
               <p className="text-sm text-slate-400">
                 <strong>Having trouble?</strong> Try these steps:
               </p>

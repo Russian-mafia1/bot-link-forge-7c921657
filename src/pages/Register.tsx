@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Zap, Mail, Lock, User, Gift, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
+import GitHubButton from '@/components/GitHubButton';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -82,7 +84,19 @@ const Register = () => {
           )}
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* GitHub Signup Button */}
+          <GitHubButton mode="signup" />
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator className="w-full bg-slate-600/50" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-slate-800/50 px-2 text-slate-400">Or continue with</span>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-300">Email</Label>
@@ -168,7 +182,7 @@ const Register = () => {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="text-center">
             <p className="text-slate-400">
               Already have an account?{' '}
               <Link

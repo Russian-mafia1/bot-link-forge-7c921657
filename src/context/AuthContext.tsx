@@ -71,7 +71,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     lastClaim: profile.last_claim
                   });
                 } else {
-                  console.log('No profile found for user');
+                  console.log('No profile found for user, might be GitHub user');
+                  // For GitHub users, create a profile if it doesn't exist
+                  if (session.user.user_metadata) {
+                    const githubUsername = session.user.user_metadata.user_name || 
+                                         session.user.user_metadata.preferred_username || 
+                                         session.user.email?.split('@')[0];
+                    
+                    try {
+                      const { error: insertError } = await supabase
+                        .from('profiles')
+                        .insert({
+                          id: session.user.id,
+                          email: session.user.email!,
+                          username: githubUsername,
+                          referral_code: `REF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                          coins: 10
+                        });
+                      
+                      if (!insertError) {
+                        setUser({
+                          id: session.user.id,
+                          email: session.user.email!,
+                          username: githubUsername,
+                          coins: 10,
+                          referralCode: `REF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                        });
+                      }
+                    } catch (profileError) {
+                      console.error('Error creating profile for GitHub user:', profileError);
+                    }
+                  }
                 }
               } catch (error) {
                 console.error('Error fetching profile:', error);
@@ -152,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (email: string, username: string, password: string, referralCode?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${window.location.origin}/dashboard`;
     
     const { error } = await supabase.auth.signUp({
       email,
