@@ -37,6 +37,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const createUserProfile = async (userId: string, email: string, username: string, referralCode?: string) => {
+    console.log('Creating profile for user:', userId, email, username);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: email,
+          username: username,
+          referral_code: referralCode || `REF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+          coins: referralCode ? 20 : 10 // Bonus coins for referral
+        });
+      
+      if (error) {
+        console.error('Error creating profile:', error);
+        throw error;
+      }
+      
+      console.log('Profile created successfully');
+      return true;
+    } catch (error) {
+      console.error('Failed to create profile:', error);
+      return false;
+    }
+  };
+
+  const fetchUserProfile = async (userId: string) => {
+    console.log('Fetching profile for user:', userId);
+    
+    try {
+      const { data, error } = await supabase.rpc('get_user_profile', { 
+        user_uuid: userId 
+      });
+      
+      console.log('Profile fetch result:', data, error);
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+      
+      if (data && data.length > 0) {
+        const profile = data[0];
+        return {
+          id: profile.id,
+          email: profile.email,
+          username: profile.username,
+          coins: profile.coins,
+          referralCode: profile.referral_code,
+          lastClaim: profile.last_claim
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -45,68 +106,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         
         if (session?.user) {
-          // Fetch user profile after authentication
+          // Use setTimeout to avoid blocking auth state changes
           setTimeout(async () => {
-              try {
-                console.log('Fetching profile for user:', session.user.id);
-                const { data, error } = await supabase.rpc('get_user_profile', { 
-                  user_uuid: session.user.id 
-                });
+            try {
+              let profile = await fetchUserProfile(session.user.id);
+              
+              // If no profile exists, create one
+              if (!profile) {
+                console.log('No profile found, creating new profile');
                 
-                console.log('Profile fetch result:', data, error);
+                // Determine username and email
+                let username = '';
+                let email = session.user.email || '';
                 
-                if (error) {
-                  console.error('Error fetching profile:', error);
-                  return;
-                }
-                
-                if (data && data.length > 0) {
-                  const profile = data[0];
-                  setUser({
-                    id: profile.id,
-                    email: profile.email,
-                    username: profile.username,
-                    coins: profile.coins,
-                    referralCode: profile.referral_code,
-                    lastClaim: profile.last_claim
-                  });
+                if (session.user.user_metadata) {
+                  // GitHub or other OAuth user
+                  username = session.user.user_metadata.user_name || 
+                           session.user.user_metadata.preferred_username || 
+                           session.user.user_metadata.name ||
+                           email.split('@')[0];
                 } else {
-                  console.log('No profile found for user, might be GitHub user');
-                  // For GitHub users, create a profile if it doesn't exist
-                  if (session.user.user_metadata) {
-                    const githubUsername = session.user.user_metadata.user_name || 
-                                         session.user.user_metadata.preferred_username || 
-                                         session.user.email?.split('@')[0];
-                    
-                    try {
-                      const { error: insertError } = await supabase
-                        .from('profiles')
-                        .insert({
-                          id: session.user.id,
-                          email: session.user.email!,
-                          username: githubUsername,
-                          referral_code: `REF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-                          coins: 10
-                        });
-                      
-                      if (!insertError) {
-                        setUser({
-                          id: session.user.id,
-                          email: session.user.email!,
-                          username: githubUsername,
-                          coins: 10,
-                          referralCode: `REF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-                        });
-                      }
-                    } catch (profileError) {
-                      console.error('Error creating profile for GitHub user:', profileError);
-                    }
-                  }
+                  // Regular email/password user - username should be in metadata
+                  username = session.user.user_metadata?.username || email.split('@')[0];
                 }
-              } catch (error) {
-                console.error('Error fetching profile:', error);
+                
+                const profileCreated = await createUserProfile(
+                  session.user.id, 
+                  email, 
+                  username,
+                  session.user.user_metadata?.referral_code
+                );
+                
+                if (profileCreated) {
+                  // Fetch the newly created profile
+                  profile = await fetchUserProfile(session.user.id);
+                }
               }
-          }, 0);
+              
+              if (profile) {
+                setUser(profile);
+              } else {
+                console.error('Failed to create or fetch user profile');
+                // Don't sign out the user, just set user to null
+                setUser(null);
+              }
+            } catch (error) {
+              console.error('Error handling user profile:', error);
+              setUser(null);
+            }
+          }, 100);
         } else {
           setUser(null);
         }
@@ -169,9 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) {
       console.error('Login error:', error);
-      if (error.message === 'Email not confirmed') {
-        throw new Error('Please check your email and click the confirmation link before signing in.');
-      } else if (error.message === 'Invalid login credentials') {
+      if (error.message === 'Invalid login credentials') {
         throw new Error('Invalid email/username or password. Please check your credentials and try again.');
       } else {
         throw new Error(error.message);
@@ -182,13 +228,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (email: string, username: string, password: string, referralCode?: string) => {
-    const redirectUrl = `${window.location.origin}/dashboard`;
+    console.log('Registration attempt:', email, username);
     
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
         data: {
           username,
           referral_code: referralCode
@@ -197,8 +242,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) {
+      console.error('Registration error:', error);
       throw new Error(error.message);
     }
+    
+    console.log('Registration successful');
   };
 
   const logout = async () => {
