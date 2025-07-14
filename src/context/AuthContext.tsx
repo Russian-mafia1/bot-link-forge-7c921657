@@ -41,18 +41,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         
         if (session?.user) {
           // Fetch user profile after authentication
           setTimeout(async () => {
               try {
-                // Use a raw query to avoid type issues
-                const { data } = await supabase.rpc('get_user_profile', { 
+                console.log('Fetching profile for user:', session.user.id);
+                const { data, error } = await supabase.rpc('get_user_profile', { 
                   user_uuid: session.user.id 
                 });
                 
-                if (data?.[0]) {
+                console.log('Profile fetch result:', data, error);
+                
+                if (error) {
+                  console.error('Error fetching profile:', error);
+                  return;
+                }
+                
+                if (data && data.length > 0) {
                   const profile = data[0];
                   setUser({
                     id: profile.id,
@@ -62,6 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     referralCode: profile.referral_code,
                     lastClaim: profile.last_claim
                   });
+                } else {
+                  console.log('No profile found for user');
                 }
               } catch (error) {
                 console.error('Error fetching profile:', error);
@@ -77,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id);
       setSession(session);
       if (!session) {
         setIsLoading(false);
@@ -87,40 +98,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (emailOrUsername: string, password: string) => {
+    console.log('Login attempt with:', emailOrUsername);
     let email = emailOrUsername;
     
     // If input doesn't contain @, treat it as username and fetch email
     if (!emailOrUsername.includes('@')) {
       try {
+        console.log('Looking up username:', emailOrUsername);
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('email')
           .eq('username', emailOrUsername)
-          .single();
+          .maybeSingle();
+        
+        console.log('Username lookup result:', profile, error);
         
         if (error) {
-          if (error.code === 'PGRST116') {
-            throw new Error('Username not found. Please check your username or sign up for an account.');
-          }
+          console.error('Database error during username lookup:', error);
           throw new Error('Error looking up username. Please try again.');
         }
         
         if (!profile) {
+          console.log('No profile found for username:', emailOrUsername);
           throw new Error('Username not found. Please check your username or sign up for an account.');
         }
         
         email = profile.email;
+        console.log('Found email for username:', email);
       } catch (error: any) {
+        console.error('Username lookup failed:', error);
         throw new Error(error.message || 'Error looking up username. Please try again.');
       }
     }
     
+    console.log('Attempting login with email:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      console.error('Login error:', error);
       if (error.message === 'Email not confirmed') {
         throw new Error('Please check your email and click the confirmation link before signing in.');
       } else if (error.message === 'Invalid login credentials') {
@@ -129,6 +147,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(error.message);
       }
     }
+    
+    console.log('Login successful');
   };
 
   const register = async (email: string, username: string, password: string, referralCode?: string) => {
