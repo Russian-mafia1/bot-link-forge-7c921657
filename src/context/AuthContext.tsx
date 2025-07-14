@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (!profile) {
           console.log('No profile found for username:', emailOrUsername);
-          throw new Error('Username not found. Please check your username or sign up for an account.');
+          throw new Error(`Username "${emailOrUsername}" not found. Please check your username or sign up for an account.`);
         }
         
         email = profile.email;
@@ -142,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error.message === 'Email not confirmed') {
         throw new Error('Please check your email and click the confirmation link before signing in.');
       } else if (error.message === 'Invalid login credentials') {
-        throw new Error('Invalid email/username or password. Please check your credentials.');
+        throw new Error('Invalid email/username or password. Please check your credentials and try again.');
       } else {
         throw new Error(error.message);
       }

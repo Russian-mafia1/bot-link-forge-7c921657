@@ -6,13 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, Mail, Lock, Loader2 } from 'lucide-react';
+import { Zap, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Login = () => {
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -28,6 +30,13 @@ const Login = () => {
       });
       navigate('/dashboard');
     } catch (error: any) {
+      console.error('Login failed:', error);
+      
+      // Show help if username not found
+      if (error.message.includes('not found')) {
+        setShowHelp(true);
+      }
+      
       toast({
         title: "Login failed",
         description: error.message,
@@ -54,6 +63,15 @@ const Login = () => {
         </CardHeader>
         
         <CardContent>
+          {showHelp && (
+            <Alert className="mb-4 border-yellow-500/50 bg-yellow-500/10">
+              <AlertCircle className="h-4 w-4 text-yellow-500" />
+              <AlertDescription className="text-yellow-200">
+                <strong>Username not found?</strong> Make sure you've signed up first, or try using your email address instead.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="emailOrUsername" className="text-slate-300">Email or Username</Label>
@@ -114,6 +132,19 @@ const Login = () => {
               </Link>
             </p>
           </div>
+
+          {showHelp && (
+            <div className="mt-4 p-3 bg-slate-700/30 rounded-lg">
+              <p className="text-sm text-slate-400">
+                <strong>Having trouble?</strong> Try these steps:
+              </p>
+              <ul className="text-sm text-slate-400 mt-2 space-y-1">
+                <li>• Make sure you've created an account first</li>
+                <li>• Check your email for a confirmation link</li>
+                <li>• Try using your email instead of username</li>
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
