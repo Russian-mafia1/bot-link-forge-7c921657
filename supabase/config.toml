@@ -1,1 +1,99 @@
 project_id = "zarcqftkumvryibndmhj"
+
+[auth]
+enabled = true
+external_email_enabled = true
+external_phone_enabled = false
+external_providers_enabled = true
+external_redirect_urls = ["https://localhost:3000/**"]
+additional_redirect_urls = []
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+refresh_token_reuse_interval = 10
+enable_manual_linking = false
+
+[db]
+pooler_enabled = false
+pooler_port = 6543
+default_pool_size = 20
+max_client_conn = 100
+default_transaction_isolation = "read committed"
+log_level = "warning"
+
+[db.settings]
+log_min_messages = "warning"
+log_min_error_statement = "error"
+log_min_duration_statement = -1
+log_statement = "none"
+
+[realtime]
+enabled = false
+max_concurrent_users = 200
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost"
+
+[storage]
+enabled = false
+file_size_limit = "50MB"
+image_transformation_enabled = false
+
+[functions.send-verification-email]
+verify_jwt = false
+
+[functions.verify-email]
+verify_jwt = false
+
+[edge_runtime]
+enabled = true
+inspector_port = 8083
+
+[analytics]
+enabled = false
+port = 54327
+vector_port = 54328
+gcp_project_id = ""
+gcp_project_number = ""
+gcp_jwt_path = "supabase/gcp.json"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[api.tls]
+enabled = false
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[gotrue]
+enabled = true
+import_maps = true
+send_sms = true
+disable_signup = false
+site_url = "http://localhost:3000"
+additional_redirect_urls = []
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+refresh_token_reuse_interval = 10
+enable_manual_linking = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+secure_email_change_enabled = true
+secure_password_change_enabled = true
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = false
+secure_phone_change_enabled = true
