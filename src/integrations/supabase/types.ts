@@ -61,31 +61,37 @@ export type Database = {
           coins: number
           created_at: string
           email: string
+          email_verified: boolean | null
           id: string
           last_claim: string | null
           referral_code: string
           updated_at: string
           username: string
+          verification_token: string | null
         }
         Insert: {
           coins?: number
           created_at?: string
           email: string
+          email_verified?: boolean | null
           id: string
           last_claim?: string | null
           referral_code: string
           updated_at?: string
           username: string
+          verification_token?: string | null
         }
         Update: {
           coins?: number
           created_at?: string
           email?: string
+          email_verified?: boolean | null
           id?: string
           last_claim?: string | null
           referral_code?: string
           updated_at?: string
           username?: string
+          verification_token?: string | null
         }
         Relationships: []
       }

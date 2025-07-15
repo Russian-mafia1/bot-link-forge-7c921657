@@ -19,6 +19,7 @@ const Register = () => {
     confirmPassword: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -40,11 +41,11 @@ const Register = () => {
 
     try {
       await register(formData.email, formData.username, formData.password, referralCode || undefined);
+      setVerificationSent(true);
       toast({
-        title: "Welcome to HACKLINK!",
-        description: "Your account has been created successfully.",
+        title: "Account created successfully!",
+        description: "Please check your email to verify your account.",
       });
-      navigate('/dashboard');
     } catch (error: any) {
       toast({
         title: "Registration failed",
@@ -62,6 +63,53 @@ const Register = () => {
       [e.target.name]: e.target.value
     });
   };
+
+  // Show verification sent screen
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md bg-slate-800/50 border-slate-700/50 backdrop-blur-lg">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-full">
+                <Mail className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl text-white">Check Your Email</CardTitle>
+            <CardDescription className="text-slate-400">
+              We've sent a verification link to {formData.email}
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
+              <p className="text-blue-200 text-sm">
+                <strong>Next steps:</strong>
+              </p>
+              <ul className="text-blue-200 text-sm mt-2 space-y-1">
+                <li>• Check your inbox for the verification email</li>
+                <li>• Click the verification link in the email</li>
+                <li>• Return to login once verified</li>
+              </ul>
+            </div>
+            
+            <div className="text-center">
+              <p className="text-slate-400 text-sm mb-4">
+                Didn't receive the email? Check your spam folder or contact support.
+              </p>
+              
+              <Button
+                onClick={() => navigate('/login')}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+              >
+                Go to Login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center">

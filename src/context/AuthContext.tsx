@@ -230,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, username: string, password: string, referralCode?: string) => {
     console.log('Registration attempt:', email, username);
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -245,6 +245,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) {
       console.error('Registration error:', error);
       throw new Error(error.message);
+    }
+
+    // Send verification email after successful registration
+    if (data.user) {
+      console.log('Sending verification email to:', email);
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-verification-email', {
+          body: {
+            email: email,
+            username: username,
+            userId: data.user.id
+          }
+        });
+
+        if (emailError) {
+          console.error('Error sending verification email:', emailError);
+          // Don't throw error here, as registration was successful
+        } else {
+          console.log('Verification email sent successfully');
+        }
+      } catch (error) {
+        console.error('Error invoking send-verification-email function:', error);
+      }
     }
     
     console.log('Registration successful');
