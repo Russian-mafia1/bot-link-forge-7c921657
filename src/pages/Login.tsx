@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import GitHubButton from '@/components/GitHubButton';
+import GoogleButton from '@/components/GoogleButton';
 
 const Login = () => {
   const [emailOrUsername, setEmailOrUsername] = useState('');
@@ -65,15 +66,18 @@ const Login = () => {
         </CardHeader>
         
         <CardContent className="space-y-4">
-          {/* GitHub Login Button */}
-          <GitHubButton mode="login" />
+          {/* Social Login Buttons */}
+          <div className="space-y-3">
+            <GoogleButton mode="login" />
+            <GitHubButton mode="login" />
+          </div>
           
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <Separator className="w-full bg-slate-600/50" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-slate-800/50 px-2 text-slate-400">Or continue with</span>
+              <span className="bg-slate-800/50 px-2 text-slate-400">Or continue with email</span>
             </div>
           </div>
 
