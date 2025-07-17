@@ -11,7 +11,12 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Deploy from "./pages/Deploy";
-import Admin from "./pages/Admin";
+import AdminLayout from "./components/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminBots from "./pages/admin/AdminBots";
+import AdminCoins from "./pages/admin/AdminCoins";
+import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -140,10 +145,16 @@ const App = () => (
                 path="admin" 
                 element={
                   <AdminRoute>
-                    <Admin />
+                    <AdminLayout />
                   </AdminRoute>
-                } 
-              />
+                }
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="bots" element={<AdminBots />} />
+                <Route path="coins" element={<AdminCoins />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
               
               {/* Catch all */}
               <Route path="*" element={<NotFound />} />
