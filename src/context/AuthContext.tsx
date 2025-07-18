@@ -18,6 +18,7 @@ interface AuthContextType {
   login: (emailOrUsername: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string, referralCode?: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithFacebook: () => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<AuthUser>) => void;
   isLoading: boolean;
@@ -290,6 +291,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithFacebook = async () => {
+    console.log('Facebook OAuth login attempt');
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`
+      }
+    });
+
+    if (error) {
+      console.error('Facebook OAuth error:', error);
+      throw new Error(error.message);
+    }
+  };
+
   const logout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -313,6 +330,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         signInWithGoogle,
+        signInWithFacebook,
         logout,
         updateUser,
         isLoading

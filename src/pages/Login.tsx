@@ -12,6 +12,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import GitHubButton from '@/components/GitHubButton';
 import GoogleButton from '@/components/GoogleButton';
+import FacebookButton from '@/components/FacebookButton';
+import AdminToggle from '@/components/AdminToggle';
 
 const Login = () => {
   const [emailOrUsername, setEmailOrUsername] = useState('');
@@ -69,6 +71,7 @@ const Login = () => {
           {/* Social Login Buttons */}
           <div className="space-y-3">
             <GoogleButton mode="login" />
+            <FacebookButton mode="login" />
             <GitHubButton mode="login" />
           </div>
           
@@ -165,6 +168,7 @@ const Login = () => {
           )}
         </CardContent>
       </Card>
+      <AdminToggle />
     </div>
   );
 };

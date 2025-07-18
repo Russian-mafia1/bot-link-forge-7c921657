@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import AdminToggle from '@/components/AdminToggle';
 
 interface Bot {
   id: string;
@@ -364,6 +365,7 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+      <AdminToggle />
     </div>
   );
 };

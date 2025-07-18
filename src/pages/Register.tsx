@@ -11,6 +11,8 @@ import { toast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import GitHubButton from '@/components/GitHubButton';
 import GoogleButton from '@/components/GoogleButton';
+import FacebookButton from '@/components/FacebookButton';
+import AdminToggle from '@/components/AdminToggle';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -137,6 +139,7 @@ const Register = () => {
           {/* Social Login Buttons */}
           <div className="space-y-3">
             <GoogleButton mode="signup" />
+            <FacebookButton mode="signup" />
             <GitHubButton mode="signup" />
           </div>
           
@@ -247,6 +250,7 @@ const Register = () => {
           </div>
         </CardContent>
       </Card>
+      <AdminToggle />
     </div>
   );
 };
