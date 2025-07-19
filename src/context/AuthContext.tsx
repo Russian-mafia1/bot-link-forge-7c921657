@@ -146,6 +146,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
               
               if (profile) {
+                // Give admin unlimited coins
+                if (profile.email === 'admin@hacklink.com' || profile.username === 'admin') {
+                  profile.coins = 999999999;
+                }
                 setUser(profile);
               } else {
                 console.error('Failed to create or fetch user profile');
